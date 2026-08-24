@@ -269,7 +269,7 @@ export function Dashboard() {
               <div className="flex flex-col items-center justify-center h-64 gap-3 text-center">
                 <Network className="w-12 h-12 text-slate-700" />
                 <p className="text-slate-500 text-sm max-w-xs">
-                  Select a job on the left to start discovering candidates through graph relationships.
+                  Select a position to start discovering candidates through graph relationships.
                 </p>
               </div>
             )}
