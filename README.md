@@ -339,9 +339,9 @@ This repository is pre-configured for **single-project deployment on Vercel** â€
 1. Import your GitHub repository into **Vercel**.
 2. Leave **Framework Preset** as **Other** (Vercel automatically detects `vercel.json`).
 3. Add the following **Environment Variables** in Vercel settings:
-   - `COGNODB_URI` = `bolt+s://db-1589c8d5.bravo.databases.cognodb.com`
+   - `COGNODB_URI` = `bolt+s://your-instance.databases.cognodb.cloud`
    - `COGNODB_USERNAME` = `cognodb`
-   - `COGNODB_PASSWORD` = `3dc1367743aec2b5c7781a823f878356`
+   - `COGNODB_PASSWORD` = `your-password-here`
 4. Click **Deploy**. Vercel will build the frontend static assets and serverless `/api/*` endpoints under one deployment URL.
 
 ## License
