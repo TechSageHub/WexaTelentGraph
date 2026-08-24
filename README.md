@@ -332,6 +332,11 @@ All screenshots were captured live against CognoDB:
 | **Ranked Candidates** | Candidate results ranked by score with explanations | [`screenshots/candidate_matches.png`](./screenshots/candidate_matches.png) |
 | **Graph Path Visualizer** | Multi-hop relationship path (`Candidate` → `Project` → `Tech` → `Job`) | [`screenshots/candidate_graph_path.png`](./screenshots/candidate_graph_path.png) |
 
+## Demo
+
+- **Hosted Application**: [https://wexa-telent-graph.vercel.app/](https://wexa-telent-graph.vercel.app/)
+- **GitHub Repository**: [https://github.com/TechSageHub/WexaTelentGraph](https://github.com/TechSageHub/WexaTelentGraph)
+
 ## Deployment on Vercel (1-Click Monorepo Setup)
 
 This repository is pre-configured for **single-project deployment on Vercel** — hosting both the React Vite frontend and the Express Serverless API together under one Vercel URL with 0 CORS issues!
@@ -339,9 +344,9 @@ This repository is pre-configured for **single-project deployment on Vercel** �
 1. Import your GitHub repository into **Vercel**.
 2. Leave **Framework Preset** as **Other** (Vercel automatically detects `vercel.json`).
 3. Add the following **Environment Variables** in Vercel settings:
-   - `COGNODB_URI` = `bolt+s://your-instance.databases.cognodb.cloud`
+   - `COGNODB_URI` = `bolt+s://db-1589c8d5.bravo.databases.cognodb.com`
    - `COGNODB_USERNAME` = `cognodb`
-   - `COGNODB_PASSWORD` = `your-password-here`
+   - `COGNODB_PASSWORD` = `3dc1367743aec2b5c7781a823f878356`
 4. Click **Deploy**. Vercel will build the frontend static assets and serverless `/api/*` endpoints under one deployment URL.
 
 ## License
