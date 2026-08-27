@@ -4,11 +4,12 @@ import {
   handleGetJob,
   handleGetJobCandidates,
 } from '../controllers/job.controller';
+import { validateParams } from '../middleware/validateParams';
 
 const router = Router();
 
 router.get('/', handleListJobs);
-router.get('/:jobId', handleGetJob);
-router.get('/:jobId/candidates', handleGetJobCandidates);
+router.get('/:jobId', validateParams(['jobId']), handleGetJob);
+router.get('/:jobId/candidates', validateParams(['jobId']), handleGetJobCandidates);
 
 export default router;

@@ -104,6 +104,7 @@ export interface MatchExplanation {
   candidateName: string;
   jobId: string;
   jobTitle: string;
+  matchScore: number;
   directSkillMatches: Skill[];
   projectPaths: MatchPath[];
   allRequiredSkills: string[];

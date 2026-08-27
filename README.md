@@ -41,10 +41,12 @@ The graph model makes relationship-traversal queries readable, efficient, and ea
 
 - **Job Selection** — Browse and select from seeded job roles
 - **Direct Skill Matching** — Find candidates with required skills
-- **Multi-hop Traversal** — Discover candidates via project → technology → job paths
+- **Multi-hop Traversal** — Discover candidates via project + technology + job paths
 - **Explainable Matching** — Natural language explanations generated from real graph paths
 - **Deterministic Match Scoring** — Formula-based scoring (documented below)
 - **Candidate Details** — Full profile with graph path visualization
+- **Candidate Directory** — Browse all candidates with search and skill filters
+- **Shortlist** — Star candidates to save them for later (persisted locally in the browser)
 - **Loading / Empty / Error States** — All async operations handled gracefully
 - **Responsive Design** — Works on desktop, tablet, and mobile
 
@@ -191,32 +193,34 @@ The seed script creates realistic, interconnected graph data:
 ```
 wexa-talentgraph/
 ├── frontend/
-│   ├── src/
-│   │   ├── components/   # JobCard, CandidateCard, MatchScore, GraphPath, etc.
-│   │   ├── pages/        # Dashboard, CandidateDetails
-│   │   ├── services/     # api.ts (typed API client)
-│   │   ├── types/        # Shared TypeScript interfaces
-│   │   ├── App.tsx
-│   │   └── main.tsx
+│   └── src/
+│       ├── components/   # JobCard, CandidateCard, MatchScore, GraphPath, Header, etc.
+│       ├── pages/        # Dashboard, Candidates, CandidateDetails, Shortlist
+│       ├── hooks/        # useShortlist (localStorage-backed shortlist)
+│       ├── services/     # api.ts (typed API client)
+│       ├── types/        # Shared TypeScript interfaces
+│       ├── App.tsx
+│       └── main.tsx
 │   ├── index.html
 │   ├── vite.config.ts
 │   └── package.json
 │
 ├── backend/
-│   ├── src/
-│   │   ├── config/       # env.ts (environment variable validation)
-│   │   ├── database/     # neo4j.ts (singleton CognoDB driver)
-│   │   ├── queries/      # jobs.queries.ts, candidates.queries.ts, matching.queries.ts
-│   │   ├── services/     # job.service.ts, candidate.service.ts, matching.service.ts
-│   │   ├── controllers/  # job.controller.ts, candidate.controller.ts
-│   │   ├── routes/       # job.routes.ts, candidate.routes.ts
-│   │   ├── middleware/   # error.middleware.ts
-│   │   └── server.ts
+│   └── src/
+│       ├── config/       # env.ts, loadEnv.ts (environment variable validation)
+│       ├── database/     # neo4j.ts (singleton CognoDB driver)
+│       ├── queries/      # jobs.queries.ts, candidates.queries.ts, matching.queries.ts
+│       ├── services/     # job.service.ts, candidate.service.ts, matching.service.ts, match.util.ts
+│       ├── controllers/  # job.controller.ts, candidate.controller.ts
+│       ├── routes/       # job.routes.ts, candidate.routes.ts
+│       ├── middleware/   # error.middleware.ts, validateParams.ts
+│       └── server.ts
 │   ├── scripts/
 │   │   └── seed.ts       # CognoDB seed script
 │   ├── tsconfig.json
 │   └── package.json
 │
+├── api/index.ts          # Vercel serverless entry (export default app)
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -306,8 +310,22 @@ UI runs at: `http://localhost:5173`
 | GET | `/api/jobs` | List all jobs |
 | GET | `/api/jobs/:jobId` | Get job details with requirements |
 | GET | `/api/jobs/:jobId/candidates` | Get matched candidates for a job |
+| GET | `/api/candidates` | List all candidates (summary) |
 | GET | `/api/candidates/:candidateId` | Get full candidate profile |
 | GET | `/api/candidates/:candidateId/matches/:jobId` | Get match explanation |
+
+---
+
+## Testing
+
+Unit tests cover the pure match helpers (`computeMatchScore` and `buildExplanation`):
+
+```bash
+# From the repo root or backend/
+npm test
+```
+
+The backend uses Vitest; there are currently no frontend tests.
 
 ---
 
@@ -317,6 +335,8 @@ UI runs at: `http://localhost:5173`
 - All Cypher queries use **parameterized values** — no string concatenation
 - The frontend never connects to CognoDB directly
 - Error responses never expose database credentials or stack traces
+- `helmet` sets secure HTTP headers; CORS is restricted to an explicit allow-list when `CORS_ORIGIN` is configured
+- Path parameters (`:jobId`, `:candidateId`) are validated before use
 
 ---
 
@@ -343,11 +363,13 @@ This repository is pre-configured for **single-project deployment on Vercel** �
 
 1. Import your GitHub repository into **Vercel**.
 2. Leave **Framework Preset** as **Other** (Vercel automatically detects `vercel.json`).
-3. Add the following **Environment Variables** in Vercel settings:
-   - `COGNODB_URI` = `bolt+s://db-1589c8d5.bravo.databases.cognodb.com`
+3. Add the following **Environment Variables** in Vercel settings (use your **own** CognoDB instance credentials — never commit real passwords):
+   - `COGNODB_URI` = `bolt+s://your-instance.databases.cognodb.cloud`
    - `COGNODB_USERNAME` = `cognodb`
-   - `COGNODB_PASSWORD` = `3dc1367743aec2b5c7781a823f878356`
+   - `COGNODB_PASSWORD` = `<your-password-here>`
 4. Click **Deploy**. Vercel will build the frontend static assets and serverless `/api/*` endpoints under one deployment URL.
+
+> **Security note:** Database credentials are secrets and **must never** be committed to the repository. They are read at runtime from environment variables only. If credentials were ever exposed in git history, rotate them immediately.
 
 ## License
 

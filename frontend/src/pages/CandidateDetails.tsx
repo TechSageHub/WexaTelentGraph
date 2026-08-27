@@ -10,12 +10,16 @@ import {
   Building2,
   Network,
   Briefcase,
+  AlertCircle,
+  RefreshCw,
+  Star,
 } from 'lucide-react';
 import { LoadingState } from '../components/LoadingState';
 import { ErrorState } from '../components/ErrorState';
 import { SkillBadge } from '../components/SkillBadge';
 import { MatchScore } from '../components/MatchScore';
 import { GraphPath } from '../components/GraphPath';
+import { useShortlist } from '../hooks/useShortlist';
 import { fetchCandidate, fetchCandidateMatch } from '../services/api';
 import type { CandidateProfile, MatchExplanation } from '../types';
 
@@ -24,10 +28,13 @@ export function CandidateDetails() {
   const [searchParams] = useSearchParams();
   const jobId = searchParams.get('jobId');
 
+  const { isShortlisted, toggle } = useShortlist();
+
   const [candidate, setCandidate] = useState<CandidateProfile | null>(null);
   const [candidateState, setCandidateState] = useState<'loading' | 'success' | 'error'>('loading');
 
   const [matchData, setMatchData] = useState<MatchExplanation | null>(null);
+  const [matchState, setMatchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   const loadCandidate = useCallback(async () => {
     if (!candidateId) return;
@@ -46,12 +53,23 @@ export function CandidateDetails() {
   }, [loadCandidate]);
 
   // Load match explanation if jobId is available
+  const loadMatch = useCallback(async () => {
+    if (!candidateId || !jobId) return;
+    setMatchState('loading');
+    try {
+      const data = await fetchCandidateMatch(candidateId, jobId);
+      setMatchData(data);
+      setMatchState('success');
+    } catch {
+      setMatchData(null);
+      setMatchState('error');
+    }
+  }, [candidateId, jobId]);
+
   useEffect(() => {
     if (!candidateId || !jobId) return;
-    fetchCandidateMatch(candidateId, jobId)
-      .then(setMatchData)
-      .catch(() => setMatchData(null));
-  }, [candidateId, jobId]);
+    loadMatch();
+  }, [loadMatch, candidateId, jobId]);
 
   if (candidateState === 'loading') {
     return (
@@ -120,17 +138,31 @@ export function CandidateDetails() {
                   </div>
                 </div>
 
-                {matchData && (
-                  <div className="flex flex-col items-end gap-1">
-                    <MatchScore
-                      score={
-                        matchData.directSkillMatches.length * 15 +
-                        matchData.projectPaths.length * 8
-                      }
+                <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                  <button
+                    id={`detail-shortlist-toggle-${candidate.id}`}
+                    onClick={() => toggle(candidate.id)}
+                    className="p-2 rounded-lg border border-slate-700 text-slate-500 hover:text-amber-400 hover:border-amber-700 transition-colors"
+                    aria-pressed={isShortlisted(candidate.id)}
+                    aria-label={
+                      isShortlisted(candidate.id)
+                        ? `Remove ${candidate.name} from shortlist`
+                        : `Add ${candidate.name} to shortlist`
+                    }
+                  >
+                    <Star
+                      className={`w-4 h-4 ${
+                        isShortlisted(candidate.id) ? 'text-amber-400 fill-amber-400' : ''
+                      }`}
                     />
-                    <span className="text-xs text-slate-500">vs. {matchData.jobTitle}</span>
-                  </div>
-                )}
+                  </button>
+                  {matchData && (
+                    <div className="flex flex-col items-end gap-1">
+                      <MatchScore score={matchData.matchScore} />
+                      <span className="text-xs text-slate-500">vs. {matchData.jobTitle}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {candidate.bio && (
@@ -139,6 +171,28 @@ export function CandidateDetails() {
             </div>
           </div>
         </div>
+
+        {/* ─── Match Explanation Error / Retry ─────────────── */}
+        {matchState === 'error' && (
+          <div className="card flex flex-col items-center gap-3 text-center py-8">
+            <AlertCircle className="w-8 h-8 text-red-400" />
+            <div>
+              <h2 className="text-slate-200 font-semibold">Could not load match details</h2>
+              <p className="text-slate-500 text-sm mt-1">
+                We couldn't retrieve this candidate's match explanation right now.
+              </p>
+            </div>
+            <button
+              id="retry-match-button"
+              onClick={loadMatch}
+              className="btn-secondary flex items-center gap-2"
+              aria-label="Retry loading match details"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Try Again
+            </button>
+          </div>
+        )}
 
         {/* ─── Match Explanation ───────────────────────────── */}
         {matchData && matchData.projectPaths.length > 0 && (

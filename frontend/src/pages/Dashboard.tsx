@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   Building2,
@@ -9,20 +10,27 @@ import {
 } from 'lucide-react';
 import { JobCard } from '../components/JobCard';
 import { CandidateCard } from '../components/CandidateCard';
+import { Header } from '../components/Header';
 import { LoadingState } from '../components/LoadingState';
 import { EmptyState } from '../components/EmptyState';
 import { ErrorState } from '../components/ErrorState';
 import { SkillBadge } from '../components/SkillBadge';
+import { useShortlist } from '../hooks/useShortlist';
 import { fetchJobs, fetchJob, fetchJobCandidates } from '../services/api';
 import type { Job, JobDetail, CandidateMatch } from '../types';
 
 type UIState = 'idle' | 'loading' | 'success' | 'error';
 
 export function Dashboard() {
+  const [searchParams] = useSearchParams();
+  const jobParam = searchParams.get('job');
+
+  const { ids: shortlistIds } = useShortlist();
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobsState, setJobsState] = useState<UIState>('loading');
 
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobParam);
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null);
   const [jobDetailState, setJobDetailState] = useState<UIState>('idle');
 
@@ -32,6 +40,9 @@ export function Dashboard() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [jobSelectorOpen, setJobSelectorOpen] = useState(false);
+
+  // Guards against out-of-order responses when the user changes job quickly.
+  const activeJobRef = useRef<string | null>(null);
 
   // Load jobs on mount
   const loadJobs = useCallback(async () => {
@@ -49,8 +60,18 @@ export function Dashboard() {
     loadJobs();
   }, [loadJobs]);
 
+  // If a job was preselected from the URL (?job=...), validate it exists
+  // once jobs finish loading (e.g. after navigating back from a detail page).
+  useEffect(() => {
+    if (jobsState !== 'success') return;
+    if (selectedJobId && !jobs.some((j) => j.id === selectedJobId)) {
+      setSelectedJobId(null);
+    }
+  }, [jobsState, jobs, selectedJobId]);
+
   // Load job detail when selection changes
   useEffect(() => {
+    activeJobRef.current = selectedJobId;
     if (!selectedJobId) {
       setSelectedJob(null);
       setCandidates([]);
@@ -61,21 +82,28 @@ export function Dashboard() {
     setJobDetailState('loading');
     fetchJob(selectedJobId)
       .then((job) => {
+        if (activeJobRef.current !== selectedJobId) return;
         setSelectedJob(job);
         setJobDetailState('success');
       })
-      .catch(() => setJobDetailState('error'));
+      .catch(() => {
+        if (activeJobRef.current !== selectedJobId) return;
+        setJobDetailState('error');
+      });
   }, [selectedJobId]);
 
   const handleFindCandidates = useCallback(async () => {
     if (!selectedJobId) return;
+    const requestedJobId = selectedJobId;
     setCandidatesState('loading');
     setCandidatesError('');
     try {
-      const data = await fetchJobCandidates(selectedJobId);
+      const data = await fetchJobCandidates(requestedJobId);
+      if (activeJobRef.current !== requestedJobId) return;
       setCandidates(data);
       setCandidatesState('success');
     } catch (err) {
+      if (activeJobRef.current !== requestedJobId) return;
       setCandidatesError(err instanceof Error ? err.message : 'Failed to find candidates');
       setCandidatesState('error');
     }
@@ -98,23 +126,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* ─── Header ─────────────────────────────────────────── */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-              <Network className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-slate-100 text-lg leading-none">TalentGraph</span>
-              <p className="text-xs text-slate-500 leading-none mt-0.5">Graph-Powered Candidate Discovery</p>
-            </div>
-          </div>
-          <div className="hidden sm:block">
-            <span className="badge badge-brand">Powered by CognoDB</span>
-          </div>
-        </div>
-      </header>
+      <Header active="dashboard" shortlistCount={shortlistIds.length} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-8 items-start">

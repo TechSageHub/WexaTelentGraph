@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { getDriver } from './database/neo4j';
+import { config } from './config/env';
 import jobRoutes from './routes/job.routes';
 import candidateRoutes from './routes/candidate.routes';
 import { errorMiddleware } from './middleware/error.middleware';
@@ -8,7 +10,22 @@ import { errorMiddleware } from './middleware/error.middleware';
 export const app = express();
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors());
+app.disable('x-powered-by');
+app.use(helmet());
+
+// Restrict CORS to an explicit allow-list when configured; otherwise reflect any
+// origin (useful for local dev where the Vite proxy shares the origin anyway).
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || config.corsOrigins.length === 0 || config.corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
 app.use(express.json());
 
 // ─── Health Check ──────────────────────────────────────────────────────────────

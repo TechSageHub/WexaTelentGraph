@@ -8,6 +8,7 @@
 import type {
   Job,
   JobDetail,
+  CandidateSummary,
   CandidateProfile,
   CandidateMatch,
   MatchExplanation,
@@ -15,8 +16,23 @@ import type {
 
 const API_BASE = import.meta.env['VITE_API_URL'] ?? '/api';
 
-async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`);
+const DEFAULT_TIMEOUT_MS = 15000;
+
+async function apiFetch<T>(path: string, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, { signal: controller.signal });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new Error('Request timed out. Please try again.');
+    }
+    throw new Error('Unable to reach the server. Please try again.');
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
@@ -58,6 +74,11 @@ export async function fetchJobCandidates(jobId: string): Promise<CandidateMatch[
 }
 
 // ─── Candidates ────────────────────────────────────────────────────────────────
+
+export async function fetchCandidates(): Promise<CandidateSummary[]> {
+  const data = await apiFetch<{ candidates: CandidateSummary[] }>('/candidates');
+  return data.candidates;
+}
 
 export async function fetchCandidate(candidateId: string): Promise<CandidateProfile> {
   const data = await apiFetch<{ candidate: CandidateProfile }>(`/candidates/${candidateId}`);

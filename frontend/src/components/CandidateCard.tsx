@@ -1,8 +1,9 @@
-import { MapPin, Clock, ExternalLink } from 'lucide-react';
+import { MapPin, Clock, ExternalLink, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { MatchScore } from './MatchScore';
 import { SkillBadge } from './SkillBadge';
 import { MatchExplanation } from './MatchExplanation';
+import { useShortlist } from '../hooks/useShortlist';
 import type { CandidateMatch } from '../types';
 
 interface CandidateCardProps {
@@ -12,6 +13,9 @@ interface CandidateCardProps {
 }
 
 export function CandidateCard({ match, jobId, rank }: CandidateCardProps) {
+  const { isShortlisted, toggle } = useShortlist();
+  const shortlisted = isShortlisted(match.id);
+
   return (
     <article
       id={`candidate-card-${match.id}`}
@@ -44,7 +48,18 @@ export function CandidateCard({ match, jobId, rank }: CandidateCardProps) {
                 </span>
               </div>
             </div>
-            <MatchScore score={match.matchScore} />
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                id={`shortlist-toggle-${match.id}`}
+                onClick={() => toggle(match.id)}
+                className="p-2 rounded-lg border border-slate-700 text-slate-500 hover:text-amber-400 hover:border-amber-700 transition-colors"
+                aria-pressed={shortlisted}
+                aria-label={shortlisted ? `Remove ${match.name} from shortlist` : `Add ${match.name} to shortlist`}
+              >
+                <Star className={`w-4 h-4 ${shortlisted ? 'text-amber-400 fill-amber-400' : ''}`} />
+              </button>
+              <MatchScore score={match.matchScore} />
+            </div>
           </div>
 
           {/* Matching skills */}

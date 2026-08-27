@@ -38,7 +38,13 @@ export async function handleGetJobCandidates(
   next: NextFunction
 ): Promise<void> {
   try {
-    const candidates = await findCandidatesForJob(req.params['jobId'] as string);
+    const jobId = req.params['jobId'] as string;
+    const job = await getJobById(jobId);
+    if (!job) {
+      res.status(404).json({ error: { message: 'Job not found' } });
+      return;
+    }
+    const candidates = await findCandidatesForJob(jobId);
     res.json({ candidates, total: candidates.length });
   } catch (err) {
     next(err);

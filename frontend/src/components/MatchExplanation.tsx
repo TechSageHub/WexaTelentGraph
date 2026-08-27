@@ -1,6 +1,7 @@
 import { Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 import type { MatchPath } from '../types';
+import { uniquePaths } from '../utils/paths';
 
 interface MatchExplanationProps {
   explanation: string;
@@ -17,10 +18,7 @@ export function MatchExplanation({
 }: MatchExplanationProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const uniquePaths = matchPaths.filter(
-    (p, i, arr) =>
-      arr.findIndex((x) => x.project === p.project && x.technology === p.technology) === i
-  );
+  const unique = uniquePaths(matchPaths);
 
   return (
     <div className="mt-3 rounded-lg bg-brand-950/50 border border-brand-900/60 overflow-hidden">
@@ -46,11 +44,11 @@ export function MatchExplanation({
         <div className="px-4 pb-4 space-y-3">
           <p className="text-sm text-slate-300 leading-relaxed">{explanation}</p>
 
-          {uniquePaths.length > 0 && (
+          {unique.length > 0 && (
             <div>
               <p className="section-label mb-2">Graph Path</p>
               <div className="space-y-1.5">
-                {uniquePaths.slice(0, 3).map((path, i) => (
+                {unique.slice(0, 3).map((path, i) => (
                   <div
                     key={i}
                     className="flex items-center gap-2 text-xs text-slate-400 flex-wrap"

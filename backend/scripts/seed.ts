@@ -10,24 +10,10 @@
  * - Logs progress and reports failures clearly
  */
 
-import dotenv from 'dotenv';
-import path from 'path';
-import fs from 'fs';
 import neo4j from 'neo4j-driver';
+import { loadEnv } from '../src/config/loadEnv';
 
-// Try multiple .env locations — works for both ts-node from scripts/ and compiled contexts
-const envCandidates = [
-  path.resolve(__dirname, '../../.env'),
-  path.resolve(__dirname, '../../../.env'),
-  path.resolve(process.cwd(), '../.env'),
-  path.resolve(process.cwd(), '.env'),
-];
-const envPath = envCandidates.find((p) => fs.existsSync(p));
-if (envPath) {
-  dotenv.config({ path: envPath });
-} else {
-  console.warn('⚠️  Could not locate .env file. Falling back to process.env.');
-}
+loadEnv();
 
 const uri = process.env['COGNODB_URI']!;
 const username = process.env['COGNODB_USERNAME']!;

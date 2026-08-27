@@ -1,4 +1,5 @@
 import type { MatchPath } from '../types';
+import { uniquePaths } from '../utils/paths';
 
 interface GraphPathProps {
   candidateName: string;
@@ -16,16 +17,13 @@ interface GraphPathProps {
 export function GraphPath({ candidateName, paths, jobTitle }: GraphPathProps) {
   if (paths.length === 0) return null;
 
-  const uniquePaths = paths.filter(
-    (p, i, arr) =>
-      arr.findIndex((x) => x.project === p.project && x.technology === p.technology) === i
-  );
+  const unique = uniquePaths(paths);
 
   return (
     <div className="card mt-4">
       <h3 className="text-sm font-semibold text-slate-300 mb-4">Graph Relationship Path</h3>
       <div className="space-y-4">
-        {uniquePaths.slice(0, 4).map((path, i) => (
+        {unique.slice(0, 4).map((path, i) => (
           <div key={i} className="flex items-center gap-0 flex-wrap">
             {/* Candidate */}
             <div className="flex flex-col items-center">

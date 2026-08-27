@@ -4,12 +4,13 @@ import {
   FULL_CANDIDATE_MATCH_QUERY,
   CANDIDATE_JOB_MATCH_EXPLANATION_QUERY,
 } from '../queries/matching.queries';
+import {
+  computeMatchScore,
+  buildExplanation,
+  type MatchPath,
+} from './match.util';
 
-export interface MatchPath {
-  project: string;
-  domain: string;
-  technology: string;
-}
+export { computeMatchScore, buildExplanation, type MatchPath };
 
 export interface CandidateMatch {
   id: string;
@@ -30,60 +31,12 @@ export interface MatchExplanation {
   candidateName: string;
   jobId: string;
   jobTitle: string;
+  matchScore: number;
   directSkillMatches: Array<{ id: string; name: string; category: string }>;
   projectPaths: MatchPath[];
   allRequiredSkills: string[];
   allJobTechnologies: string[];
   explanation: string;
-}
-
-/**
- * Compute a deterministic match score (0–100).
- *
- * Scoring strategy (documented in README):
- *   - Each matched required skill   = 15 points (max 60)
- *   - Each matched technology via project = 8 points (max 40)
- *   Capped at 100.
- */
-function computeMatchScore(skillMatchCount: number, techMatchCount: number): number {
-  const skillPoints = Math.min(skillMatchCount * 15, 60);
-  const techPoints = Math.min(techMatchCount * 8, 40);
-  return Math.min(skillPoints + techPoints, 100);
-}
-
-/**
- * Generate a human-readable explanation from actual graph match data.
- * This is derived from real Cypher results, not hardcoded.
- */
-function buildExplanation(
-  candidateName: string,
-  matchingSkills: string[],
-  matchingTechs: string[],
-  matchPaths: MatchPath[]
-): string {
-  const parts: string[] = [];
-
-  if (matchingSkills.length > 0) {
-    const skillList = matchingSkills.slice(0, 3).join(', ');
-    const extra = matchingSkills.length > 3 ? ` and ${matchingSkills.length - 3} more` : '';
-    parts.push(
-      `${candidateName} has ${matchingSkills.length} required skill${matchingSkills.length > 1 ? 's' : ''}: ${skillList}${extra}.`
-    );
-  }
-
-  if (matchPaths.length > 0) {
-    const uniqueProjects = [...new Set(matchPaths.map((p) => p.project))].slice(0, 2);
-    const uniqueTechs = [...new Set(matchPaths.map((p) => p.technology))].slice(0, 3);
-    parts.push(
-      `They also worked on ${uniqueProjects.join(' and ')}, gaining experience with ${uniqueTechs.join(', ')} — technologies relevant to this role.`
-    );
-  } else if (matchingTechs.length > 0) {
-    parts.push(
-      `Their project experience includes ${matchingTechs.slice(0, 3).join(', ')}, which are technologies used in this role.`
-    );
-  }
-
-  return parts.join(' ') || 'This candidate has relevant experience for this role.';
 }
 
 function toNumber(value: unknown): number {
@@ -163,6 +116,9 @@ export async function getCandidateJobMatchExplanation(
     const allJobTechnologies: string[] = record.get('allJobTechnologies') ?? [];
     const candidateName: string = record.get('candidateName');
 
+    const matchedTechCount = new Set(projectPaths.map((p) => p.technology)).size;
+    const matchScore = computeMatchScore(directSkillMatches.length, matchedTechCount);
+
     const explanation = buildExplanation(
       candidateName,
       directSkillMatches.map((s: { name: string }) => s.name),
@@ -175,6 +131,7 @@ export async function getCandidateJobMatchExplanation(
       candidateName,
       jobId: record.get('jobId'),
       jobTitle: record.get('jobTitle'),
+      matchScore,
       directSkillMatches,
       projectPaths,
       allRequiredSkills: allRequiredSkills.filter(Boolean),
